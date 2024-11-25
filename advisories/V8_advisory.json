@@ -1,7 +1,7 @@
 {
   "schema_version": "1.4.0",
   "id": "V8",
-  "modified": "2024-11-22T18:32:44+01:00",
+  "modified": "2024-11-25T20:44:38+01:00",
   "published": "2024-11-22T16:36:05+01:00",
   "aliases": null,
   "summary": "https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/security/updates.md",
@@ -10,16 +10,18 @@
     {
       "package": {
         "name": "V8",
-        "ecosystem": "OSS-Fuzz"
+        "ecosystem": "Chrome"
       },
       "ranges": [
         {
           "type": "GIT",
+          "repo": "https://github.com/v8/v8/tree/stable",
           "events": [
             {
-              "introduced": "0000000",
-              "fixed": "97f474b2b96c5b619f0dae3c5742ef391b89e202",
-              "last_affected": ""
+              "introduced": "0"
+            },
+            {
+              "fixed": "97f474b2b96c5b619f0dae3c5742ef391b89e202"
             }
           ]
         }
@@ -28,16 +30,18 @@
     {
       "package": {
         "name": "V8",
-        "ecosystem": "OSS-Fuzz"
+        "ecosystem": "Chrome"
       },
       "ranges": [
         {
           "type": "GIT",
+          "repo": "https://github.com/v8/v8/tree/beta",
           "events": [
             {
-              "introduced": "0000000",
-              "fixed": "d52cf43ed90e97ac56805f16d1b168c62bc69276",
-              "last_affected": ""
+              "introduced": "0"
+            },
+            {
+              "fixed": "d52cf43ed90e97ac56805f16d1b168c62bc69276"
             }
           ]
         }

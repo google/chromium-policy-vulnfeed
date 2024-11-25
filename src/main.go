@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/google/go-github/v66/github"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/google/go-github/v66/github"
 )
 
 type Policy struct {
@@ -19,13 +20,15 @@ type Policy struct {
 	Description   string `json:"description"`
 }
 
+type Event struct {
+	Fixed      string `json:"fixed,omitempty"`
+	Introduced string `json:"introduced,omitempty"`
+}
+
 type Range struct {
-	Type   string `json:"type"`
-	Events []struct {
-		Introduced   string `json:"introduced"`
-		Fixed        string `json:"fixed"`
-		LastAffected string `json:"last_affected"`
-	} `json:"events"`
+	Type   string  `json:"type"`
+	Repo   string  `json:"repo"`
+	Events []Event `json:"events"`
 }
 
 type AffectedItem struct {
@@ -106,11 +109,13 @@ func main() {
 			Since: sinceDate,
 		}
 
+		repoLink := repoURL + "/tree/" + branch
+
 		commits, _, err := client.Repositories.ListCommits(context.Background(), owner, repoName, listOptions)
 		if err != nil {
 			panic(err)
 		}
-		processBranch(commits, &advisory)
+		processBranch(repoLink, commits, &advisory)
 	}
 	advisoryJSON, err := json.MarshalIndent(advisory, "", "  ")
 	if err != nil {
@@ -125,7 +130,7 @@ func main() {
 	fmt.Println("Advisory data saved to", advisoryPath)
 }
 
-func processBranch(commits []*github.RepositoryCommit, advisory *Advisory) {
+func processBranch(repoLink string, commits []*github.RepositoryCommit, advisory *Advisory) {
 	if len(commits) > 0 {
 		// Get the oldest commit within the timeframe
 		oldestCommit := commits[len(commits)-1]
@@ -136,15 +141,13 @@ func processBranch(commits []*github.RepositoryCommit, advisory *Advisory) {
 
 		affectedRange := Range{
 			Type: "GIT",
-			Events: []struct {
-				Introduced   string `json:"introduced"`
-				Fixed        string `json:"fixed"`
-				LastAffected string `json:"last_affected"`
-			}{
+			Repo: repoLink,
+			Events: []Event{
 				{
-					Introduced:   "0000000",
-					Fixed:        commitSHA,
-					LastAffected: "",
+					Introduced: "0",
+				},
+				{
+					Fixed: commitSHA,
 				},
 			},
 		}
@@ -155,7 +158,7 @@ func processBranch(commits []*github.RepositoryCommit, advisory *Advisory) {
 				Ecosystem string `json:"ecosystem"`
 			}{
 				Name:      "V8",
-				Ecosystem: "OSS-Fuzz",
+				Ecosystem: "Chrome",
 			},
 			Ranges: []Range{affectedRange},
 		}
