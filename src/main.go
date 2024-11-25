@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -13,11 +12,12 @@ import (
 )
 
 type Policy struct {
-	ID            string `json:"id"`
-	Repository    string `json:"repository"`
-	FreshnessDays int    `json:"freshness_days"`
-	PolicyLink    string `json:"policy_link"`
-	Description   string `json:"description"`
+	ID            string   `json:"id"`
+	Repository    string   `json:"repository"`
+	FreshnessDays int      `json:"freshness_days"`
+	PolicyLink    string   `json:"policy_link"`
+	Description   string   `json:"description"`
+	Branches      []string `json:"branches"`
 }
 
 type Event struct {
@@ -50,40 +50,69 @@ type Advisory struct {
 	Affected      []AffectedItem
 }
 
-var supportedBranches = []string{"stable", "beta"}
-
 func main() {
-	policyPath := filepath.Join("policies", "v8-policy.json")
-	data, err := os.ReadFile(policyPath)
+	policy, err := loadPolicy("policies/v8-policy.json")
 	if err != nil {
 		panic(err)
+	}
+
+	advisory, err := loadAdvisory("advisories/V8_advisory.json")
+	if err != nil {
+		panic(err)
+	}
+
+	advisory = updateAdvisory(advisory, policy)
+
+	client := github.NewClient(nil)
+	affected, err := generateAffectedItems(client, policy)
+	if err != nil {
+		panic(err)
+	}
+	advisory.Affected = affected
+
+	err = saveAdvisory("advisories/V8_advisory.json", advisory)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Advisory data saved to advisories/V8_advisory.json")
+}
+
+func loadPolicy(policyPath string) (*Policy, error) {
+	data, err := os.ReadFile(policyPath)
+	if err != nil {
+		return nil, err
 	}
 
 	var policy Policy
 	err = json.Unmarshal(data, &policy)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	currentTime := time.Now()
-	timestamp := currentTime.Format(time.RFC3339)
+	return &policy, nil
+}
 
-	advisoryPath := filepath.Join("advisories", "V8_advisory.json")
+func loadAdvisory(advisoryPath string) (*Advisory, error) {
 	advisoryData, err := os.ReadFile(advisoryPath)
 	var advisory Advisory
 	if err == nil {
-		// If the file exists, unmarshal the existing data
 		err = json.Unmarshal(advisoryData, &advisory)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	} else if !os.IsNotExist(err) {
-		// Panic only if the error is something other than file not existing
-		panic(err)
+		return nil, err
 	}
 
+	return &advisory, nil
+}
+
+func updateAdvisory(advisory *Advisory, policy *Policy) *Advisory {
+	currentTime := time.Now()
+	timestamp := currentTime.Format(time.RFC3339)
+
 	if advisory.Published == "" {
-		// If Published is empty (i.e., new advisory), set it to the current timestamp
 		advisory.Published = timestamp
 	}
 
@@ -94,7 +123,10 @@ func main() {
 	advisory.Details = "Known exploits stem from outdated V8 versions. Please make sure your repository follows the policy at " + policy.PolicyLink + ". Specifically, track either the stable, beta or extended stable branch and update at least weekly."
 	advisory.Affected = nil
 
-	client := github.NewClient(nil)
+	return advisory
+}
+
+func generateAffectedItems(client *github.Client, policy *Policy) ([]AffectedItem, error) {
 	repoURL := policy.Repository
 	parts := strings.Split(repoURL, "/")
 	owner := parts[len(parts)-2]
@@ -102,7 +134,8 @@ func main() {
 
 	sinceDate := time.Now().AddDate(0, 0, -policy.FreshnessDays)
 
-	for _, branch := range supportedBranches {
+	var affectedItems []AffectedItem
+	for _, branch := range policy.Branches {
 
 		listOptions := &github.CommitsListOptions{
 			SHA:   branch,
@@ -113,24 +146,35 @@ func main() {
 
 		commits, _, err := client.Repositories.ListCommits(context.Background(), owner, repoName, listOptions)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		processBranch(repoLink, commits, &advisory)
+
+		affectedItem, err := processBranch(repoLink, commits)
+		if err != nil {
+			return nil, err
+		}
+		if affectedItem != nil {
+			affectedItems = append(affectedItems, *affectedItem)
+		}
 	}
+	return affectedItems, nil
+}
+
+func saveAdvisory(advisoryPath string, advisory *Advisory) error {
 	advisoryJSON, err := json.MarshalIndent(advisory, "", "  ")
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	err = os.WriteFile(advisoryPath, advisoryJSON, 0644)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	fmt.Println("Advisory data saved to", advisoryPath)
+	return nil
 }
 
-func processBranch(repoLink string, commits []*github.RepositoryCommit, advisory *Advisory) {
+func processBranch(repoLink string, commits []*github.RepositoryCommit) (*AffectedItem, error) {
 	if len(commits) > 0 {
 		// Get the oldest commit within the timeframe
 		oldestCommit := commits[len(commits)-1]
@@ -163,9 +207,10 @@ func processBranch(repoLink string, commits []*github.RepositoryCommit, advisory
 			Ranges: []Range{affectedRange},
 		}
 
-		advisory.Affected = append(advisory.Affected, affectedItem)
+		return &affectedItem, nil
 
 	} else {
 		fmt.Println("No commits found within the specified timeframe.")
+		return nil, nil
 	}
 }
