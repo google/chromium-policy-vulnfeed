@@ -1,11 +1,11 @@
 {
   "schema_version": "1.4.0",
   "id": "V8",
-  "modified": "2024-11-25T20:44:38+01:00",
+  "modified": "2024-11-25T21:55:16+01:00",
   "published": "2024-11-22T16:36:05+01:00",
   "aliases": null,
   "summary": "https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/security/updates.md",
-  "details": "Known exploits stem from outdated V8 versions. Please make sure your repository follows the policy at https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/security/updates.md. Specifically, track either the stable, beta or extended stable branch and update at least weekly.",
+  "details": "Dependency on outdated V8 found. Please update to the latest beta, stable, or extended stable versions.",
   "Affected": [
     {
       "package": {
