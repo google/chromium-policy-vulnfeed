@@ -1,1 +1,4 @@
 .idea/
+pkg/
+.github/.DS_Store
+.DS_Store
