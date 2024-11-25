@@ -101,7 +101,13 @@ func loadAdvisory(advisoryPath string) (*Advisory, error) {
 		if err != nil {
 			return nil, err
 		}
-	} else if !os.IsNotExist(err) {
+	} else if os.IsNotExist(err) {
+		currentTime := time.Now().Format(time.RFC3339)
+		advisory = Advisory{
+			Published: currentTime,
+		}
+	} else {
+		// Some other error occurred while reading the file
 		return nil, err
 	}
 
@@ -116,12 +122,12 @@ func updateAdvisory(advisory *Advisory, policy *Policy) *Advisory {
 		advisory.Published = timestamp
 	}
 
-	advisory.SchemaVersion = "1.4.0"
 	advisory.ID = policy.ID
 	advisory.Modified = timestamp
 	advisory.Summary = policy.PolicyLink
-	advisory.Details = "Known exploits stem from outdated V8 versions. Please make sure your repository follows the policy at " + policy.PolicyLink + ". Specifically, track either the stable, beta or extended stable branch and update at least weekly."
+	advisory.Details = policy.Description
 	advisory.Affected = nil
+	advisory.Aliases = nil
 
 	return advisory
 }
