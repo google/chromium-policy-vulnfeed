@@ -1,6 +1,10 @@
 {
   "id": "V8",
   "repository": "https://github.com/v8/v8",
+  "branches": [
+    "stable",
+    "beta"
+  ],
   "freshness_days": 7,
   "policy_link": "https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/security/updates.md",
   "description": "Dependency on outdated V8 found. Please update to the latest beta, stable, or extended stable versions."
