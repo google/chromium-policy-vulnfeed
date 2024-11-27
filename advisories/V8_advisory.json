@@ -1,7 +1,7 @@
 {
   "schema_version": "1.4.0",
   "id": "V8",
-  "modified": "2024-11-25T21:55:16+01:00",
+  "modified": "2024-11-27T10:29:10+01:00",
   "published": "2024-11-22T16:36:05+01:00",
   "aliases": null,
   "summary": "https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/security/updates.md",
@@ -41,7 +41,7 @@
               "introduced": "0"
             },
             {
-              "fixed": "d52cf43ed90e97ac56805f16d1b168c62bc69276"
+              "fixed": "9fed86eae8714b68fe000d37ca7b62fd21380f75"
             }
           ]
         }
