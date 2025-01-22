@@ -46,53 +46,61 @@ type Range struct {
 }
 
 type AffectedItem struct {
-	Package struct {
-		Name      string `json:"name"`
-		Ecosystem string `json:"ecosystem"`
-	} `json:"package"`
 	Ranges []Range `json:"ranges"`
 }
 
 type Advisory struct {
-	SchemaVersion string   `json:"schema_version"`
-	ID            string   `json:"id"`
-	Modified      string   `json:"modified"`
-	Published     string   `json:"published"`
-	Aliases       []string `json:"aliases"`
-	Summary       string   `json:"summary"`
-	Details       string   `json:"details"`
-	Affected      []AffectedItem
+	SchemaVersion string         `json:"schema_version"`
+	ID            string         `json:"id"`
+	Modified      string         `json:"modified"`
+	Published     string         `json:"published"`
+	Summary       string         `json:"summary"`
+	Details       string         `json:"details"`
+	Affected      []AffectedItem `json:"affected"`
 }
+
+var now = time.Now()
+var nowTimestamp = now.Format(time.RFC3339)
+
+var policyPath = "policies/V8-policy.json"
+var cachePath = "src/V8-cache.json"
+var advisoryPath = "advisories/V8-advisory.json"
 
 func main() {
-	policy, err := loadPolicy("policies/v8-policy.json")
+	policy, err := loadPolicy()
 	if err != nil {
 		panic(err)
 	}
 
-	advisory, err := loadAdvisory("advisories/V8_advisory.json")
+	cache, err := loadCache()
 	if err != nil {
 		panic(err)
 	}
 
-	advisory = updateAdvisory(advisory, policy)
-
-	client := github.NewClient(nil)
-	affected, err := generateAffectedItems(client, policy)
-	if err != nil {
-		panic(err)
-	}
-	advisory.Affected = affected
-
-	err = saveAdvisory("advisories/V8_advisory.json", advisory)
+	advisory, err := loadAdvisory()
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("Advisory data saved to advisories/V8_advisory.json")
+	cache, err = updateCache(policy.Repository, policy.Branches, cache)
+	if err != nil {
+		panic(err)
+	}
+
+	advisory = updateAdvisory(advisory, policy, cache)
+
+	if err := saveAdvisory(advisory); err != nil {
+		panic(err)
+	}
+
+	if err := saveCache(cache, policy); err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Advisory data saved to " + advisoryPath)
 }
 
-func loadPolicy(policyPath string) (*Policy, error) {
+func loadPolicy() (*Policy, error) {
 	data, err := os.ReadFile(policyPath)
 	if err != nil {
 		return nil, err
@@ -107,7 +115,36 @@ func loadPolicy(policyPath string) (*Policy, error) {
 	return &policy, nil
 }
 
-func loadAdvisory(advisoryPath string) (*Advisory, error) {
+func loadCache() (map[string][]string, error) {
+	cacheData := make(map[string][]string)
+	data, err := os.ReadFile(cachePath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, fmt.Errorf("error reading cache file: %w", err)
+		}
+		return cacheData, nil
+	}
+	err = json.Unmarshal(data, &cacheData)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing cache file: %w", err)
+	}
+	return cacheData, nil
+}
+
+func saveCache(cacheData map[string][]string, policy *Policy) error {
+
+	updatedData, err := json.MarshalIndent(cacheData, "", "  ")
+	if err != nil {
+		return fmt.Errorf("error marshalling cache data: %w", err)
+	}
+	err = os.WriteFile(cachePath, updatedData, 0644)
+	if err != nil {
+		return fmt.Errorf("error writing cache file: %w", err)
+	}
+	return nil
+}
+
+func loadAdvisory() (*Advisory, error) {
 	advisoryData, err := os.ReadFile(advisoryPath)
 	var advisory Advisory
 	if err == nil {
@@ -116,9 +153,8 @@ func loadAdvisory(advisoryPath string) (*Advisory, error) {
 			return nil, err
 		}
 	} else if os.IsNotExist(err) {
-		currentTime := time.Now().Format(time.RFC3339)
 		advisory = Advisory{
-			Published: currentTime,
+			Published: nowTimestamp,
 		}
 	} else {
 		// Some other error occurred while reading the file
@@ -128,64 +164,31 @@ func loadAdvisory(advisoryPath string) (*Advisory, error) {
 	return &advisory, nil
 }
 
-func updateAdvisory(advisory *Advisory, policy *Policy) *Advisory {
-	currentTime := time.Now()
-	timestamp := currentTime.Format(time.RFC3339)
+func updateAdvisory(advisory *Advisory, policy *Policy, cache map[string][]string) *Advisory {
+
+	affectedItem, err := createAffectedItem(policy, cache)
+	if err != nil {
+		panic(err)
+	}
 
 	if advisory.Published == "" {
-		advisory.Published = timestamp
+		advisory.Published = nowTimestamp
 	}
 
 	advisory.ID = policy.ID
-	advisory.Modified = timestamp
+	advisory.Modified = nowTimestamp
 	advisory.Summary = policy.PolicyLink
 	advisory.Details = policy.Description
-	advisory.Affected = nil
-	advisory.Aliases = nil
+	advisory.Affected = []AffectedItem{*affectedItem}
 
 	return advisory
 }
 
-func generateAffectedItems(client *github.Client, policy *Policy) ([]AffectedItem, error) {
-	repoURL := policy.Repository
-	parts := strings.Split(repoURL, "/")
-	owner := parts[len(parts)-2]
-	repoName := parts[len(parts)-1]
-
-	sinceDate := time.Now().AddDate(0, 0, -policy.FreshnessDays)
-
-	var affectedItems []AffectedItem
-	for _, branch := range policy.Branches {
-
-		listOptions := &github.CommitsListOptions{
-			SHA:   branch,
-			Since: sinceDate,
-		}
-
-		repoLink := repoURL + "/tree/" + branch
-
-		commits, _, err := client.Repositories.ListCommits(context.Background(), owner, repoName, listOptions)
-		if err != nil {
-			return nil, err
-		}
-
-		affectedItem, err := processBranch(repoLink, commits)
-		if err != nil {
-			return nil, err
-		}
-		if affectedItem != nil {
-			affectedItems = append(affectedItems, *affectedItem)
-		}
-	}
-	return affectedItems, nil
-}
-
-func saveAdvisory(advisoryPath string, advisory *Advisory) error {
+func saveAdvisory(advisory *Advisory) error {
 	advisoryJSON, err := json.MarshalIndent(advisory, "", "  ")
 	if err != nil {
 		return err
 	}
-
 	err = os.WriteFile(advisoryPath, advisoryJSON, 0644)
 	if err != nil {
 		return err
@@ -194,43 +197,73 @@ func saveAdvisory(advisoryPath string, advisory *Advisory) error {
 	return nil
 }
 
-func processBranch(repoLink string, commits []*github.RepositoryCommit) (*AffectedItem, error) {
-	if len(commits) > 0 {
-		// Get the oldest commit within the timeframe
-		oldestCommit := commits[len(commits)-1]
-		commitSHA := oldestCommit.GetSHA()
-		commitDate := oldestCommit.GetCommit().GetCommitter().GetDate().Format("2006-01-02")
-		//commitTitle := oldestCommit.GetCommit().GetMessage()
-		fmt.Println("Commit Date:", commitDate, ", SHA:", commitSHA)
+func updateCache(repoURL string, branches []string, cache map[string][]string) (map[string][]string, error) {
+	client := github.NewClient(nil)
+	parts := strings.Split(repoURL, "/")
+	owner := parts[len(parts)-2]
+	repoName := parts[len(parts)-1]
+	hashes := make([]string, len(branches))
 
-		affectedRange := Range{
-			Type: "GIT",
-			Repo: repoLink,
-			Events: []Event{
-				{
-					Introduced: "0",
-				},
-				{
-					Fixed: commitSHA,
-				},
-			},
+	for i, branchName := range branches {
+		listOptions := &github.CommitsListOptions{
+			SHA: branchName,
 		}
 
-		affectedItem := AffectedItem{
-			Package: struct {
-				Name      string `json:"name"`
-				Ecosystem string `json:"ecosystem"`
-			}{
-				Name:      "V8",
-				Ecosystem: "Chrome",
-			},
-			Ranges: []Range{affectedRange},
+		commits, _, err := client.Repositories.ListCommits(context.Background(), owner, repoName, listOptions)
+		if err != nil {
+			return nil, err
 		}
 
-		return &affectedItem, nil
-
-	} else {
-		fmt.Println("No commits found within the specified timeframe.")
-		return nil, nil
+		hashes[i] = *commits[0].SHA
 	}
+
+	today := now.Format("2006-01-02")
+	cache[today] = hashes
+
+	return cache, nil
+}
+
+func createAffectedItem(policy *Policy, cache map[string][]string) (*AffectedItem, error) {
+
+	hashes, err := getCacheEntry(cache, policy.FreshnessDays)
+	if err != nil {
+		panic(err)
+	}
+
+	fixedEvents := make([]Event, len(hashes))
+
+	for i, hash := range hashes {
+		fixedEvents[i] = Event{Fixed: hash}
+	}
+
+	r := Range{
+		Type:   "GIT",
+		Repo:   policy.Repository,
+		Events: append([]Event{{Introduced: "0"}}, fixedEvents...),
+	}
+
+	affectedItem := AffectedItem{
+		Ranges: []Range{r},
+	}
+
+	return &affectedItem, nil
+}
+
+func getCacheEntry(cache map[string][]string, d int) ([]string, error) {
+	targetDate := time.Now().AddDate(0, 0, -d).Format("2006-01-02")
+
+	if hashes, ok := cache[targetDate]; ok {
+		return hashes, nil
+	}
+
+	// No entry found for the target date, try closer dates.
+	for i := d - 1; i >= 0; i-- {
+		targetDate = time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+		if hashes, ok := cache[targetDate]; ok {
+			return hashes, nil
+		}
+	}
+
+	// Today's entry definitely exists, since we added that.
+	return cache[now.Format("2006-01-02")], nil
 }

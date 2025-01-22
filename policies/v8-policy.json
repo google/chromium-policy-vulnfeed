@@ -3,7 +3,8 @@
   "repository": "https://github.com/v8/v8",
   "branches": [
     "stable",
-    "beta"
+    "beta",
+    "main"
   ],
   "freshness_days": 7,
   "policy_link": "https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/security/updates.md",
