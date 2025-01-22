@@ -1,6 +1,14 @@
 name: Update Advisory
 
+permissions:
+  contents: write
+
 on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
   schedule:
   - cron: '0 0 * * *' # Run every day at midnight
 
@@ -14,7 +22,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version:1 '1.20'
+        go-version:1 '1.21'
 
     - name: Build Go application
       run: go build -o update-advisory src/main.go
@@ -22,15 +30,20 @@ jobs:
     - name: Run Go application
       run: ./update-advisory
 
+    - name: Remove executable
+      run: rm update-advisor
+
     - name: Commit changes
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"2
-        git add .
-        git commit3 -m "Update advisories/V8_advisory.json"
+        git add advisories/V8-advisory.json
+        git add src/V8-cache.json
+        git commit3 -m "Update advisories/V8_advisory.json and src/V8-cache.json"
+        git push
 
-    - name: Push changes
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: main
+#    - name: Push changes
+#      uses: ad-m/github-push-action@master
+#      with:
+#        github_token: ${{ secrets.GITHUB_TOKEN }}
+#        branch: main
