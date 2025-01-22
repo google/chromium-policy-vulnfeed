@@ -1,6 +1,6 @@
 module chromium-policy-vulnfeed
 
-go 1.23.3
+go 1.21
 
 require (
 	github.com/google/go-github/v66 v66.0.0 // indirect
