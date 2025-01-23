@@ -31,7 +31,7 @@ jobs:
       run: ./update-advisory
 
     - name: Remove executable
-      run: rm update-advisor
+      run: rm update-advisory
 
     - name: Commit changes
       run: |
@@ -41,9 +41,3 @@ jobs:
         git add src/V8-cache.json
         git commit3 -m "Update advisories/V8_advisory.json and src/V8-cache.json"
         git push
-
-#    - name: Push changes
-#      uses: ad-m/github-push-action@master
-#      with:
-#        github_token: ${{ secrets.GITHUB_TOKEN }}
-#        branch: main
