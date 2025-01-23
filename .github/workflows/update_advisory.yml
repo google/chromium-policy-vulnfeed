@@ -25,7 +25,7 @@ jobs:
         go-version: '1.21'
 
     - name: Build Go application
-      run: go build -o update-advisory src/main.go
+      run: go build -o update-advisory ./src/main.go
 
     - name: Run Go application
       run: ./update-advisory
@@ -37,7 +37,7 @@ jobs:
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"2
-        git add advisories/V8-advisory.json
-        git add src/V8-cache.json
+        git add ./advisories/V8-advisory.json
+        git add ./src/V8-cache.json
         git commit3 -m "Update advisories/V8_advisory.json and src/V8-cache.json"
         git push
