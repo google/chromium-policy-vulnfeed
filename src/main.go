@@ -59,12 +59,18 @@ type Advisory struct {
 	Affected      []AffectedItem `json:"affected"`
 }
 
-var now = time.Now()
-var nowTimestamp = now.Format(time.RFC3339)
+var (
+	now          = time.Now()
+	nowTimestamp = now.Format(time.RFC3339)
+	today        = format(now)
+	policyPath   = "policies/V8-policy.json"
+	cachePath    = "src/V8-cache.json"
+	advisoryPath = "advisories/V8-advisory.json"
+)
 
-var policyPath = "policies/V8-policy.json"
-var cachePath = "src/V8-cache.json"
-var advisoryPath = "advisories/V8-advisory.json"
+type Repositories interface {
+	ListCommits(ctx context.Context, owner, repo string, opts *github.CommitsListOptions) ([]*github.RepositoryCommit, *github.Response, error)
+}
 
 func main() {
 	policy, err := loadPolicy()
@@ -81,19 +87,22 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	cache, err = updateCache(policy.Repository, policy.Branches, cache)
+	client := github.NewClient(nil)
+	cache, err = updateCache(policy.Repository, client.Repositories, policy.Branches, cache)
 	if err != nil {
 		panic(err)
 	}
 
-	advisory = updateAdvisory(advisory, policy, cache)
-
-	if err := saveAdvisory(advisory); err != nil {
+	advisory, err = updateAdvisory(advisory, policy, cache)
+	if err != nil {
 		panic(err)
 	}
 
-	if err := saveCache(cache, policy); err != nil {
+	if err = saveAdvisory(advisory); err != nil {
+		panic(err)
+	}
+
+	if err = saveCache(cache); err != nil {
 		panic(err)
 	}
 
@@ -131,7 +140,7 @@ func loadCache() (map[string][]string, error) {
 	return cacheData, nil
 }
 
-func saveCache(cacheData map[string][]string, policy *Policy) error {
+func saveCache(cacheData map[string][]string) error {
 
 	updatedData, err := json.MarshalIndent(cacheData, "", "  ")
 	if err != nil {
@@ -164,11 +173,16 @@ func loadAdvisory() (*Advisory, error) {
 	return &advisory, nil
 }
 
-func updateAdvisory(advisory *Advisory, policy *Policy, cache map[string][]string) *Advisory {
-
-	affectedItem, err := createAffectedItem(policy, cache)
+// updateAdvisory updates Advisory fields with the latest vulnerable ranges information.
+func updateAdvisory(advisory *Advisory, policy *Policy, cache map[string][]string) (*Advisory, error) {
+	hashes, err := getCacheEntry(cache, policy.FreshnessDays)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to get cache entry: %w", err)
+	}
+
+	affectedItem, err := createAffectedItem(policy, hashes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create AffectedItem: %w", err)
 	}
 
 	if advisory.Published == "" {
@@ -181,9 +195,10 @@ func updateAdvisory(advisory *Advisory, policy *Policy, cache map[string][]strin
 	advisory.Details = policy.Description
 	advisory.Affected = []AffectedItem{*affectedItem}
 
-	return advisory
+	return advisory, nil
 }
 
+// saveAdvisory stores the advisory into the advisory file.
 func saveAdvisory(advisory *Advisory) error {
 	advisoryJSON, err := json.MarshalIndent(advisory, "", "  ")
 	if err != nil {
@@ -197,60 +212,61 @@ func saveAdvisory(advisory *Advisory) error {
 	return nil
 }
 
-func updateCache(repoURL string, branches []string, cache map[string][]string) (map[string][]string, error) {
-	client := github.NewClient(nil)
-	parts := strings.Split(repoURL, "/")
-	owner := parts[len(parts)-2]
-	repoName := parts[len(parts)-1]
-	hashes := make([]string, len(branches))
-
-	for i, branchName := range branches {
+// updateCache polls the requested repository's branches' latest commit hashes and stores them in the cache.
+func updateCache(repoURL string, repos Repositories, branches []string, cache map[string][]string) (map[string][]string, error) {
+	s := strings.Split(repoURL, "/")
+	owner := s[len(s)-2]
+	repoName := s[len(s)-1]
+	hashes := make(map[string]bool)
+	for _, branchName := range branches {
 		listOptions := &github.CommitsListOptions{
 			SHA: branchName,
 		}
 
-		commits, _, err := client.Repositories.ListCommits(context.Background(), owner, repoName, listOptions)
+		commits, _, err := repos.ListCommits(context.Background(), owner, repoName, listOptions)
 		if err != nil {
 			return nil, err
 		}
-
-		hashes[i] = *commits[0].SHA
+		// Get the latest commit of this branch.
+		hashes[*commits[0].SHA] = true
 	}
 
-	today := now.Format("2006-01-02")
-	cache[today] = hashes
+	uniqueHashes := make([]string, 0, len(hashes))
+	for key := range hashes {
+		uniqueHashes = append(uniqueHashes, key)
+	}
+	today := today
+	cache[today] = uniqueHashes
 
 	return cache, nil
 }
 
-func createAffectedItem(policy *Policy, cache map[string][]string) (*AffectedItem, error) {
-
-	hashes, err := getCacheEntry(cache, policy.FreshnessDays)
-	if err != nil {
-		panic(err)
-	}
-
+func createAffectedItem(policy *Policy, hashes []string) (*AffectedItem, error) {
 	fixedEvents := make([]Event, len(hashes))
 
 	for i, hash := range hashes {
 		fixedEvents[i] = Event{Fixed: hash}
 	}
 
-	r := Range{
-		Type:   "GIT",
-		Repo:   policy.Repository,
-		Events: append([]Event{{Introduced: "0"}}, fixedEvents...),
-	}
-
 	affectedItem := AffectedItem{
-		Ranges: []Range{r},
+		Ranges: []Range{{
+			Type:   "GIT",
+			Repo:   policy.Repository,
+			Events: append([]Event{{Introduced: "0"}}, fixedEvents...),
+		}},
 	}
 
 	return &affectedItem, nil
 }
 
 func getCacheEntry(cache map[string][]string, d int) ([]string, error) {
-	targetDate := time.Now().AddDate(0, 0, -d).Format("2006-01-02")
+	if d < 0 {
+		return nil, fmt.Errorf("can only get cache entries with a positive days difference")
+	}
+	if cache[today] == nil {
+		return nil, fmt.Errorf("today's entry must exist in the cache")
+	}
+	targetDate := format(time.Now().AddDate(0, 0, -d))
 
 	if hashes, ok := cache[targetDate]; ok {
 		return hashes, nil
@@ -258,12 +274,16 @@ func getCacheEntry(cache map[string][]string, d int) ([]string, error) {
 
 	// No entry found for the target date, try closer dates.
 	for i := d - 1; i >= 0; i-- {
-		targetDate = time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+		targetDate = format(time.Now().AddDate(0, 0, -i))
 		if hashes, ok := cache[targetDate]; ok {
 			return hashes, nil
 		}
 	}
 
 	// Today's entry definitely exists, since we added that.
-	return cache[now.Format("2006-01-02")], nil
+	return cache[today], nil
+}
+
+func format(t time.Time) string {
+	return t.Format("2006-01-02")
 }
