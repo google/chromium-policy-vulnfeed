@@ -61,13 +61,20 @@ type Advisory struct {
 	Affected      []AffectedItem `json:"affected"`
 }
 
+const (
+	policyBasePath   = "policies/V8-policy.json"
+	cacheBasePath    = "src/V8-cache.json"
+	advisoryBasePath = "advisories/V8-advisory.json"
+)
+
 var (
 	now          = time.Now()
 	nowTimestamp = now.Format(time.RFC3339)
 	today        = format(now)
-	policyPath   = "policies/V8-policy.json"
-	cachePath    = "src/V8-cache.json"
-	advisoryPath = "advisories/V8-advisory.json"
+	dir          string
+	policyPath   string
+	cachePath    string
+	advisoryPath string
 )
 
 type Repositories interface {
@@ -75,6 +82,10 @@ type Repositories interface {
 }
 
 func main() {
+	// Construct absolute path of the runner.
+	_, filename, _, _ := runtime.Caller(0)
+	dir = filepath.Dir(filename)
+
 	policy, err := loadPolicy()
 	if err != nil {
 		panic(err)
@@ -112,10 +123,8 @@ func main() {
 }
 
 func loadPolicy() (*Policy, error) {
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	advisoryFilePath := filepath.Join(dir, "../advisories/V8-advisory.json")
-	data, err := os.ReadFile(advisoryFilePath)
+	policyPath = filepath.Join(dir, "../", policyBasePath)
+	data, err := os.ReadFile(policyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -131,6 +140,7 @@ func loadPolicy() (*Policy, error) {
 
 func loadCache() (map[string][]string, error) {
 	cacheData := make(map[string][]string)
+	cachePath = filepath.Join(dir, "../", cacheBasePath)
 	data, err := os.ReadFile(cachePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -146,7 +156,6 @@ func loadCache() (map[string][]string, error) {
 }
 
 func saveCache(cacheData map[string][]string) error {
-
 	updatedData, err := json.MarshalIndent(cacheData, "", "  ")
 	if err != nil {
 		return fmt.Errorf("error marshalling cache data: %w", err)
@@ -159,6 +168,7 @@ func saveCache(cacheData map[string][]string) error {
 }
 
 func loadAdvisory() (*Advisory, error) {
+	advisoryPath = filepath.Join(dir, "../", advisoryBasePath)
 	advisoryData, err := os.ReadFile(advisoryPath)
 	var advisory Advisory
 	if err == nil {
