@@ -28,7 +28,7 @@ jobs:
         pwd
         go build -o update-advisory src/main.go
         ls -l
-        update-advisory
+        ./update-advisory
         rm update-advisory
 
     - name: Commit changes
