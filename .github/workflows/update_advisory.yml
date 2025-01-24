@@ -23,8 +23,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Run tests
-      run: go test ./src/main_test.go -v
-      continue-on-error: false 
+      run: go test ./src/... -v
+      continue-on-error: false
     - name: Run Go application
       run: |
         go build -o update-advisory src/main.go
