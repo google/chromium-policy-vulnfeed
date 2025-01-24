@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -63,7 +65,7 @@ var (
 	now          = time.Now()
 	nowTimestamp = now.Format(time.RFC3339)
 	today        = format(now)
-	policyPath   = "./policies/V8-policy.json"
+	policyPath   = "policies/V8-policy.json"
 	cachePath    = "src/V8-cache.json"
 	advisoryPath = "advisories/V8-advisory.json"
 )
@@ -110,7 +112,10 @@ func main() {
 }
 
 func loadPolicy() (*Policy, error) {
-	data, err := os.ReadFile(policyPath)
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	advisoryFilePath := filepath.Join(dir, "../advisories/V8-advisory.json")
+	data, err := os.ReadFile(advisoryFilePath)
 	if err != nil {
 		return nil, err
 	}
