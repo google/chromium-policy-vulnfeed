@@ -26,7 +26,7 @@ jobs:
 
     - name: Run Go application
       run: |
-        go build -o ./update-advisory main.go
+        go build -o ./update-advisory ./src/main.go
         ./update-advisory
         rm ./update-advisory
 
