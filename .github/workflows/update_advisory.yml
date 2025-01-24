@@ -26,7 +26,6 @@ jobs:
 
     - name: Run Go application
       working-directory: .
-
       run: |
         pwd
         go build -o update-advisory src/main.go
