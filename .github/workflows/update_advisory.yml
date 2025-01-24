@@ -28,6 +28,10 @@ jobs:
         pwd
         go build -o update-advisory src/main.go
         ls -l
+        cd policies
+        ls -l
+        cp v8-policy.json test.json
+        ls -l
         ./update-advisory
         rm update-advisory
 
