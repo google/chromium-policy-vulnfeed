@@ -28,8 +28,7 @@ jobs:
       run: go build -o update-advisory main.go
       working-directory: ./src
     - name: Run Go application
-      run: update-advisory
-      working-directory: ./src
+      run: ./src/update-advisory
     - name: Remove executable
       run: rm update-advisory
       working-directory: ./src
