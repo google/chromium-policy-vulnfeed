@@ -86,6 +86,15 @@ func main() {
 	_, filename, _, _ := runtime.Caller(0)
 	dir = filepath.Dir(filename)
 
+	workspace := os.Getenv("GITHUB_WORKSPACE")
+	fmt.Println("GITHUB_WORKSPACE:", workspace)
+
+	dir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("PWD:", dir)
+
 	policy, err := loadPolicy()
 	if err != nil {
 		panic(err)
@@ -125,7 +134,6 @@ func main() {
 func loadPolicy() (*Policy, error) {
 	policyPath = filepath.Join(dir, "../", policyBasePath)
 	data, err := os.ReadFile(policyPath)
-	fmt.Println(policyPath)
 	if err != nil {
 		return nil, err
 	}
