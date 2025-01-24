@@ -29,7 +29,7 @@ jobs:
       run: |
         pwd
         go build -o update-advisory src/main.go
-        cp ./policies/V8-policy.json ${{ github.workspace }}/policies/V8-policy.json
+        cp policies/V8-policy.json ${{ github.workspace }}/policies/V8-policy.json
         ls -l
         ./update-advisory
         rm update-advisory
