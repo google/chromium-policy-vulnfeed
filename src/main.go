@@ -63,9 +63,9 @@ var (
 	now          = time.Now()
 	nowTimestamp = now.Format(time.RFC3339)
 	today        = format(now)
-	policyPath   = "./policies/V8-policy.json"
-	cachePath    = "./src/V8-cache.json"
-	advisoryPath = "./advisories/V8-advisory.json"
+	policyPath   = "policies/V8-policy.json"
+	cachePath    = "src/V8-cache.json"
+	advisoryPath = "advisories/V8-advisory.json"
 )
 
 type Repositories interface {

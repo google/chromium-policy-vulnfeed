@@ -25,13 +25,13 @@ jobs:
         go-version: '1.21'
 
     - name: Build Go application
-      run: go build -o update-advisory ./src/main.go
+      run: go build -o src/update-advisory ./src/main.go
 
     - name: Run Go application
-      run: ./update-advisory
+      run: src/update-advisory
 
     - name: Remove executable
-      run: rm update-advisory
+      run: rm src/update-advisory
 
     - name: Commit changes
       run: |
