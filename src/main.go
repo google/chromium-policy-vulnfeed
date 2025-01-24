@@ -133,6 +133,7 @@ func main() {
 
 func loadPolicy() (*Policy, error) {
 	policyPath = filepath.Join(dir, "../", policyBasePath)
+	fmt.Printf("policyPath: %q\n", policyPath)
 	data, err := os.ReadFile(policyPath)
 	if err != nil {
 		return nil, err
