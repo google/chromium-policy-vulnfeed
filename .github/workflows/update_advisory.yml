@@ -28,11 +28,7 @@ jobs:
         pwd
         go build -o update-advisory src/main.go
         ls -l
-        cd policies
-        ls -l
-        cp V8-policy.json test.json
-        ls -l
-        ./update-advisory
+        update-advisory
         rm update-advisory
 
     - name: Commit changes
