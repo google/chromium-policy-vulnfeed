@@ -26,7 +26,10 @@ jobs:
 
     - name: Run Go application
       run: |
+        pwd
+        ls -l 
         go build -o update-advisory ./src/main.go
+        ls -l
         update-advisory
         rm update-advisory
 
