@@ -19,8 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -62,53 +60,38 @@ type Advisory struct {
 }
 
 const (
-	policyBasePath   = "policies/V8-policy.json"
-	cacheBasePath    = "src/V8-cache.json"
-	advisoryBasePath = "advisories/V8-advisory.json"
+	policyPath   = "policies/V8-policy.json"
+	cachePath    = "src/V8-cache.json"
+	advisoryPath = "advisories/V8-advisory.json"
 )
 
 var (
 	now          = time.Now()
 	nowTimestamp = now.Format(time.RFC3339)
 	today        = format(now)
-	dir          string
-	policyPath   string
-	cachePath    string
-	advisoryPath string
 )
 
+// Create interface for GitHub API's Repositories, so we can mock the function out in tests.
 type Repositories interface {
 	ListCommits(ctx context.Context, owner, repo string, opts *github.CommitsListOptions) ([]*github.RepositoryCommit, *github.Response, error)
 }
 
 func main() {
-	// Construct absolute path of the runner.
-	_, filename, _, _ := runtime.Caller(0)
-	dir = filepath.Dir(filename)
-
-	workspace := os.Getenv("GITHUB_WORKSPACE")
-	fmt.Println("GITHUB_WORKSPACE:", workspace)
-
-	dir, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("PWD:", dir)
-
-	policy, err := loadPolicy()
+	policy, err := loadPolicy(policyPath)
 	if err != nil {
 		panic(err)
 	}
 
-	cache, err := loadCache()
+	cache, err := loadCache(cachePath)
 	if err != nil {
 		panic(err)
 	}
 
-	advisory, err := loadAdvisory()
+	advisory, err := loadAdvisory(advisoryPath)
 	if err != nil {
 		panic(err)
 	}
+
 	client := github.NewClient(nil)
 	cache, err = updateCache(policy.Repository, client.Repositories, policy.Branches, cache)
 	if err != nil {
@@ -120,37 +103,32 @@ func main() {
 		panic(err)
 	}
 
-	if err = saveAdvisory(advisory); err != nil {
+	if err = saveAdvisory(advisoryPath, advisory); err != nil {
 		panic(err)
 	}
 
-	if err = saveCache(cache); err != nil {
+	if err = saveCache(cachePath, cache); err != nil {
 		panic(err)
 	}
-
-	fmt.Println("Advisory data saved to " + advisoryPath)
 }
 
-func loadPolicy() (*Policy, error) {
-	policyPath = filepath.Join(dir, "../", policyBasePath)
-	fmt.Printf("policyPath: %q\n", policyPath)
+func loadPolicy(policyPath string) (*Policy, error) {
 	data, err := os.ReadFile(policyPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading policy file: %w", err)
 	}
 
 	var policy Policy
 	err = json.Unmarshal(data, &policy)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed parsing policy:%w", err)
 	}
 
 	return &policy, nil
 }
 
-func loadCache() (map[string][]string, error) {
+func loadCache(cachePath string) (map[string][]string, error) {
 	cacheData := make(map[string][]string)
-	cachePath = filepath.Join(dir, "../", cacheBasePath)
 	data, err := os.ReadFile(cachePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -165,7 +143,36 @@ func loadCache() (map[string][]string, error) {
 	return cacheData, nil
 }
 
-func saveCache(cacheData map[string][]string) error {
+// updateCache polls the requested repository's branches' latest commit hashes and stores them in the cache.
+func updateCache(repoURL string, repos Repositories, branches []string, cache map[string][]string) (map[string][]string, error) {
+	s := strings.Split(repoURL, "/")
+	owner := s[len(s)-2]
+	repoName := s[len(s)-1]
+	hashes := make(map[string]bool)
+	for _, branchName := range branches {
+		listOptions := &github.CommitsListOptions{
+			SHA: branchName,
+		}
+
+		commits, _, err := repos.ListCommits(context.Background(), owner, repoName, listOptions)
+		if err != nil {
+			return nil, fmt.Errorf("error getting commit hashes:%w", err)
+		}
+		// Get the latest commit of this branch.
+		hashes[*commits[0].SHA] = true
+	}
+
+	uniqueHashes := make([]string, 0, len(hashes))
+	for key := range hashes {
+		uniqueHashes = append(uniqueHashes, key)
+	}
+	today := today
+	cache[today] = uniqueHashes
+
+	return cache, nil
+}
+
+func saveCache(cachePath string, cacheData map[string][]string) error {
 	updatedData, err := json.MarshalIndent(cacheData, "", "  ")
 	if err != nil {
 		return fmt.Errorf("error marshalling cache data: %w", err)
@@ -177,14 +184,13 @@ func saveCache(cacheData map[string][]string) error {
 	return nil
 }
 
-func loadAdvisory() (*Advisory, error) {
-	advisoryPath = filepath.Join(dir, "../", advisoryBasePath)
+func loadAdvisory(advisoryPath string) (*Advisory, error) {
 	advisoryData, err := os.ReadFile(advisoryPath)
 	var advisory Advisory
 	if err == nil {
 		err = json.Unmarshal(advisoryData, &advisory)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error parsing advisory: %w", err)
 		}
 	} else if os.IsNotExist(err) {
 		advisory = Advisory{
@@ -192,7 +198,7 @@ func loadAdvisory() (*Advisory, error) {
 		}
 	} else {
 		// Some other error occurred while reading the file
-		return nil, err
+		return nil, fmt.Errorf("error reading advisory file: %w", err)
 	}
 
 	return &advisory, nil
@@ -224,46 +230,17 @@ func updateAdvisory(advisory *Advisory, policy *Policy, cache map[string][]strin
 }
 
 // saveAdvisory stores the advisory into the advisory file.
-func saveAdvisory(advisory *Advisory) error {
+func saveAdvisory(advisoryPath string, advisory *Advisory) error {
 	advisoryJSON, err := json.MarshalIndent(advisory, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal advisory: %w", err)
 	}
 	err = os.WriteFile(advisoryPath, advisoryJSON, 0644)
 	if err != nil {
-		return err
+		return fmt.Errorf("error writing advisory file: %w", err)
 	}
 
 	return nil
-}
-
-// updateCache polls the requested repository's branches' latest commit hashes and stores them in the cache.
-func updateCache(repoURL string, repos Repositories, branches []string, cache map[string][]string) (map[string][]string, error) {
-	s := strings.Split(repoURL, "/")
-	owner := s[len(s)-2]
-	repoName := s[len(s)-1]
-	hashes := make(map[string]bool)
-	for _, branchName := range branches {
-		listOptions := &github.CommitsListOptions{
-			SHA: branchName,
-		}
-
-		commits, _, err := repos.ListCommits(context.Background(), owner, repoName, listOptions)
-		if err != nil {
-			return nil, err
-		}
-		// Get the latest commit of this branch.
-		hashes[*commits[0].SHA] = true
-	}
-
-	uniqueHashes := make([]string, 0, len(hashes))
-	for key := range hashes {
-		uniqueHashes = append(uniqueHashes, key)
-	}
-	today := today
-	cache[today] = uniqueHashes
-
-	return cache, nil
 }
 
 func createAffectedItem(policy *Policy, hashes []string) (*AffectedItem, error) {

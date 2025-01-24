@@ -296,11 +296,7 @@ func TestLoadPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	originalPolicyPath := policyPath
-	policyPath = file.Name()
-	defer func() { policyPath = originalPolicyPath }()
-
-	policy, err := loadPolicy()
+	policy, err := loadPolicy(file.Name())
 	if err != nil {
 		t.Fatalf("loadPolicy failed: %v", err)
 	}
@@ -329,11 +325,7 @@ func TestLoadCache(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	originalCachePath := cachePath
-	cachePath = file.Name()
-	defer func() { cachePath = originalCachePath }()
-
-	cache, err := loadCache()
+	cache, err := loadCache(file.Name())
 	if err != nil {
 		t.Fatalf("loadCache failed: %v", err)
 	}
@@ -353,15 +345,11 @@ func TestSaveCache(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
-	originalCachePath := cachePath
-	cachePath = file.Name()
-	defer func() { cachePath = originalCachePath }()
-
 	cache := map[string][]string{
 		"2024-12-04": {"hash1", "hash2"},
 	}
 
-	err = saveCache(cache)
+	err = saveCache(file.Name(), cache)
 	if err != nil {
 		t.Fatalf("saveCache failed: %v", err)
 	}
@@ -397,11 +385,7 @@ func TestLoadAdvisory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	originalAdvisoryPath := advisoryPath
-	advisoryPath = file.Name()
-	defer func() { advisoryPath = originalAdvisoryPath }()
-
-	advisory, err := loadAdvisory()
+	advisory, err := loadAdvisory(file.Name())
 	if err != nil {
 		t.Fatalf("loadAdvisory failed: %v", err)
 	}
@@ -422,17 +406,13 @@ func TestSaveAdvisory(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
-	originalAdvisoryPath := advisoryPath
-	advisoryPath = file.Name()
-	defer func() { advisoryPath = originalAdvisoryPath }()
-
 	advisory := &Advisory{
 		SchemaVersion: "1.0",
 		ID:            "advisoryID",
 		Affected:      []AffectedItem{},
 	}
 
-	err = saveAdvisory(advisory)
+	err = saveAdvisory(file.Name(), advisory)
 	if err != nil {
 		t.Fatalf("saveAdvisory failed: %v", err)
 	}
