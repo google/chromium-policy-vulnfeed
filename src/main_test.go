@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/go-github/v66/github"
 )
 
@@ -110,8 +112,8 @@ func TestUpdateCache(t *testing.T) {
 			if err != nil {
 				t.Fatalf("updateCache failed: %v", err)
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("unexpected AffectedItem: got %v, want %v", got, tt.want)
+			if diff := cmp.Diff(got, tt.want, cmpopts.SortSlices(func(a, b string) bool { return a < b })); diff != "" {
+				t.Errorf("unexpected AffectedItem: diff (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -223,8 +225,8 @@ func TestGetCacheEntry(t *testing.T) {
 				t.Errorf("getCacheEntry() error = %v", err)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getCacheEntry() = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(got, tt.want, cmpopts.SortSlices(func(a, b string) bool { return a < b })); diff != "" {
+				t.Errorf("getCacheEntry() diff (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -365,8 +367,8 @@ func TestSaveCache(t *testing.T) {
     "hash2"
   ]
 }`)
-	if !reflect.DeepEqual(savedCacheData, expectedCacheData) {
-		t.Errorf("unexpected cache data: got %v, want %v", savedCacheData, expectedCacheData)
+	if diff := cmp.Diff(savedCacheData, expectedCacheData, cmpopts.SortSlices(func(a, b string) bool { return a < b })); diff != "" {
+		t.Errorf("unexpected AffectedItem: diff (-want +got):\n%s", diff)
 	}
 }
 
