@@ -9,11 +9,6 @@ on:
     paths-ignore:
     - 'advisories/**'
     - 'docs/**'
-  pull_request:
-    branches: [ main ]
-    paths-ignore:
-    - 'advisories/**'
-    - 'docs/**'
   workflow_dispatch:
   schedule:
   - cron: '0 0 * * *' # Run every day at midnight
