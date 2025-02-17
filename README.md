@@ -1,15 +1,14 @@
 # Chromium Policy Vulnfeed
 
-Chromium Policy Vulnfeed is a project that aims to add the capability to Google's scanners
-to find repositories that are using outdated, and therefore security vulnerable versions of Chromium packages such as
+Chromium Policy Vulnfeed is a project that aims to add the capability to vulnerability scanners
+to find repositories that are using outdated, and therefore security vulnerable versions of packages such as
 V8.
 
-Which versions of these packages are considered outdated is based on a policy that the package owners can define. The
-policy is parsed by this project and a vulnerability feed (advisory) is created that vulnerability databases such as
+Which versions of these packages are considered outdated is based on a policy that the package owners can define.
+The policy is parsed by this code and a vulnerability feed is created that vulnerability databases such as
 OSV.dev can pick up.
 
-Databases like OSV.dev are the basis for vulnerability scanners, which use advisories like this one to find vulnerable
-projects.
+The code is generic enough to support a variety of software, but it's currently focused on Chromium related software.
 
 Apache header:
 
