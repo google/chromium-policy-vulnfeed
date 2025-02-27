@@ -1,7 +1,7 @@
 {
   "schema_version": "1.6.7",
   "id": "V8",
-  "modified": "2025-02-26T00:31:04Z",
+  "modified": "2025-02-27T00:31:26Z",
   "published": "2024-11-22T16:36:05+01:00",
   "summary": "https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/security/updates.md",
   "details": "Dependency on outdated V8 found. Please update to the latest [beta](https://chromium.googlesource.com/v8/v8.git/+/refs/heads/beta), [stable](https://chromium.googlesource.com/v8/v8.git/+/refs/heads/stable), or [extended stable](https://chromium.googlesource.com/v8/v8.git/+/refs/heads/extended) versions.",
@@ -25,7 +25,7 @@
               "fixed": "0dc54bf61b704f8cf364ebd33fbe2f0d77ae4576"
             },
             {
-              "fixed": "8fc795bf2909194330ac8abda676b192c2c8f441"
+              "fixed": "f7e95c2c91cab0effed78efe1b756a1a08aaadf3"
             }
           ]
         }
