@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	yesterday = format(time.Now().AddDate(0, 0, -1))
+	yesterday = formatDate(time.Now().AddDate(0, 0, -1))
 )
 
 // MockRepositories mocks the GitHub API's client behavior.

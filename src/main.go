@@ -66,9 +66,9 @@ const (
 )
 
 var (
-	now          = time.Now()
-	nowTimestamp = now.Format(time.RFC3339)
-	today        = format(now)
+	now          = time.Now().UTC()
+	nowTimestamp = now.Format("2006-01-02T15:04:05Z")
+	today        = formatDate(now)
 )
 
 // Create interface for GitHub API's Repositories, so we can mock the function out in tests.
@@ -268,7 +268,7 @@ func getCacheEntry(cache map[string][]string, d int) ([]string, error) {
 	if cache[today] == nil {
 		return nil, fmt.Errorf("today's entry must exist in the cache")
 	}
-	targetDate := format(time.Now().AddDate(0, 0, -d))
+	targetDate := formatDate(time.Now().AddDate(0, 0, -d))
 
 	if hashes, ok := cache[targetDate]; ok {
 		return hashes, nil
@@ -276,7 +276,7 @@ func getCacheEntry(cache map[string][]string, d int) ([]string, error) {
 
 	// No entry found for the target date, try closer dates.
 	for i := d - 1; i >= 0; i-- {
-		targetDate = format(time.Now().AddDate(0, 0, -i))
+		targetDate = formatDate(time.Now().AddDate(0, 0, -i))
 		if hashes, ok := cache[targetDate]; ok {
 			return hashes, nil
 		}
@@ -286,6 +286,6 @@ func getCacheEntry(cache map[string][]string, d int) ([]string, error) {
 	return cache[today], nil
 }
 
-func format(t time.Time) string {
+func formatDate(t time.Time) string {
 	return t.Format("2006-01-02")
 }
