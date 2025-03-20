@@ -8,6 +8,6 @@
     "main"
   ],
   "freshness_days": 7,
-  "policy_link": "https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/security/updates.md",
-  "description": "Dependency on outdated V8 found. Please update to the latest [beta](https://chromium.googlesource.com/v8/v8.git/+/refs/heads/beta), [stable](https://chromium.googlesource.com/v8/v8.git/+/refs/heads/stable), or [extended stable](https://chromium.googlesource.com/v8/v8.git/+/refs/heads/extended) versions."
+  "summary": "Outdated dependency on V8 found (see details)",
+  "description": "Outdated dependency on V8 found (see [policy](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/security/updates.md).\n\nPlease update to the latest [beta](https://chromium.googlesource.com/v8/v8.git/+/refs/heads/beta), [stable](https://chromium.googlesource.com/v8/v8.git/+/refs/heads/stable), or [extended stable](https://chromium.googlesource.com/v8/v8.git/+/refs/heads/extended) versions."
 }

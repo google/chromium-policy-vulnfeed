@@ -29,7 +29,7 @@ type Policy struct {
 	ID            string   `json:"id"`
 	Repository    string   `json:"repository"`
 	FreshnessDays int      `json:"freshness_days"`
-	PolicyLink    string   `json:"policy_link"`
+	Summary       string   `json:summary`
 	Description   string   `json:"description"`
 	Branches      []string `json:"branches"`
 }
@@ -222,7 +222,7 @@ func updateAdvisory(advisory *Advisory, policy *Policy, cache map[string][]strin
 
 	advisory.ID = policy.ID
 	advisory.Modified = nowTimestamp
-	advisory.Summary = policy.PolicyLink
+	advisory.Summary = policy.Summary
 	advisory.Details = policy.Description
 	advisory.Affected = []AffectedItem{*affectedItem}
 
