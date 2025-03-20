@@ -237,7 +237,7 @@ func TestUpdateAdvisory(t *testing.T) {
 		ID:            "policyID",
 		Repository:    "owner/repo",
 		FreshnessDays: 1,
-		PolicyLink:    "policyLink",
+		Summary:       "policySummary",
 		Description:   "policyDescription",
 	}
 
@@ -261,7 +261,7 @@ func TestUpdateAdvisory(t *testing.T) {
 		ID:            "policyID",
 		Modified:      nowTimestamp,
 		Published:     nowTimestamp,
-		Summary:       "policyLink",
+		Summary:       "policySummary",
 		Details:       "policyDescription",
 		Affected: []AffectedItem{
 			{
