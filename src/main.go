@@ -29,6 +29,7 @@ type Policy struct {
 	ID            string   `json:"id"`
 	Repository    string   `json:"repository"`
 	FreshnessDays int      `json:"freshness_days"`
+	PolicyLink    string   `json:"policy_link"`
 	Summary       string   `json:summary`
 	Description   string   `json:"description"`
 	Branches      []string `json:"branches"`
