@@ -30,7 +30,7 @@ type Policy struct {
 	Repository    string   `json:"repository"`
 	FreshnessDays int      `json:"freshness_days"`
 	PolicyLink    string   `json:"policy_link"`
-	Summary       string   `json:summary`
+	Summary       string   `json:"summary"`
 	Description   string   `json:"description"`
 	Branches      []string `json:"branches"`
 }
@@ -122,7 +122,7 @@ func loadPolicy(policyPath string) (*Policy, error) {
 	var policy Policy
 	err = json.Unmarshal(data, &policy)
 	if err != nil {
-		return nil, fmt.Errorf("failed parsing policy:%w", err)
+		return nil, fmt.Errorf("failed parsing policy: %w", err)
 	}
 
 	return &policy, nil
@@ -157,7 +157,7 @@ func updateCache(repoURL string, repos Repositories, branches []string, cache ma
 
 		commits, _, err := repos.ListCommits(context.Background(), owner, repoName, listOptions)
 		if err != nil {
-			return nil, fmt.Errorf("error getting commit hashes:%w", err)
+			return nil, fmt.Errorf("error getting commit hashes: %w", err)
 		}
 		// Get the latest commit of this branch.
 		hashes[*commits[0].SHA] = true
