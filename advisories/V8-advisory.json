@@ -1,7 +1,7 @@
 {
   "schema_version": "1.6.7",
   "id": "V8-FRESHNESS",
-  "modified": "2025-10-27T00:38:09Z",
+  "modified": "2025-10-28T00:33:59Z",
   "published": "2024-11-22T15:36:05Z",
   "summary": "Outdated dependency on V8 found (see details)",
   "details": "Outdated dependency on V8 found (see [policy](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/security/updates.md)).\n\nPlease update to the latest [beta](https://chromium.googlesource.com/v8/v8.git/+/refs/heads/beta), [stable](https://chromium.googlesource.com/v8/v8.git/+/refs/heads/stable), or [extended stable](https://chromium.googlesource.com/v8/v8.git/+/refs/heads/extended) versions.",
@@ -16,16 +16,16 @@
               "introduced": "0"
             },
             {
-              "fixed": "b7ed978e41b4bac7802b206404d0e2f3d09f31ac"
-            },
-            {
               "fixed": "ad8af0fc661d278e87627fcaa3a7cf795ee80dd8"
             },
             {
-              "fixed": "adb1ff62bee5aab4b04ca0f32b07a66821f1dcce"
+              "fixed": "02c660ae896a5d69bc999a65692d1e675d6efe3c"
             },
             {
-              "fixed": "cc09aa2cc4c5906528ec32c471ed3c9b2289a1f2"
+              "fixed": "0fe4b0a69ed29e95a45ef1f5c192e518ad06438f"
+            },
+            {
+              "fixed": "b7ed978e41b4bac7802b206404d0e2f3d09f31ac"
             }
           ]
         }
